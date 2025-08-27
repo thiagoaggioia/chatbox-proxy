@@ -1,70 +1,84 @@
 export default async function handler(req, res) {
-    console.log('=== INÍCIO DA REQUISIÇÃO ===');
-    console.log('Method:', req.method);
-    
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
     if (req.method === 'OPTIONS') {
-        console.log('OPTIONS request');
         return res.status(200).end();
     }
     
     if (req.method === 'GET') {
-        console.log('GET request');
-        return res.json({ status: 'Gemini API Ready - Debug Mode' });
+        return res.json({ status: 'Gemini API Ready - Fixed Model' });
     }
     
     if (req.method === 'POST') {
         try {
-            console.log('POST request recebido');
-            console.log('Body:', req.body);
-            
-            // Testar se consegue importar
-            console.log('Tentando importar GoogleGenerativeAI...');
             const { GoogleGenerativeAI } = await import("@google/generative-ai");
-            console.log('Import realizado com sucesso');
-            
-            // Testar se tem a API key
-            console.log('API Key exists:', !!process.env.GEMINI_API_KEY);
-            
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-            console.log('Modelo criado com sucesso');
+            
+            // MODELO CORRETO - mudou de "gemini-pro" para "gemini-1.5-flash"
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             
             const { action, data } = req.body || {};
-            console.log('Action:', action);
-            console.log('Data:', data);
+            let prompt = '';
             
-            // Por enquanto, retornar resposta de teste
             if (action === 'generate_survey') {
-                return res.json({
-                    response: {
-                        survey: [
-                            { question: "Debug: Gemini conectado?", options: ["Sim", "Não", "Talvez", "Erro"] }
-                        ]
-                    }
-                });
+                prompt = `Aja como um consultor de carreira especializado em ESG e IA.
+Com base no seguinte perfil:
+- Perfil de trabalho: ${data.perfil}
+- Habilidades: ${data.habilidades.join(', ')}
+- Objetivo de carreira: ${data.objetivo}
+
+Crie um questionário com 10 perguntas de múltipla escolha para entender melhor as lacunas e interesses desse usuário.
+As perguntas devem focar em hard skills e soft skills.
+Cada pergunta deve ter 4 opções de resposta.
+
+Formate a resposta APENAS como JSON puro, sem texto adicional:
+{
+  "survey": [
+    {
+      "question": "Pergunta aqui?",
+      "options": ["Opção A", "Opção B", "Opção C", "Opção D"]
+    }
+  ]
+}`;
+                
+            } else if (action === 'generate_roadmap') {
+                prompt = `Aja como um consultor de carreira especializado em ESG e IA.
+Com base nas informações:
+- Perfil: ${data.perfil}
+- Habilidades: ${data.habilidades.join(', ')}
+- Respostas do questionário: ${data.surveyResults}
+- Objetivo: ${data.objetivo}
+
+Crie um roadmap profissional com 3-5 passos práticos.
+Inclua sugestões de aprendizado, atividades práticas e networking.
+Foque em ESG + IA.
+Responda em formato Markdown.`;
             }
             
-            if (action === 'generate_roadmap') {
-                return res.json({
-                    response: "# Debug Mode\n\n✅ Gemini importado\n✅ API Key detectada\n✅ Modelo criado"
-                });
+            if (!prompt) {
+                return res.status(400).json({ response: "Ação não especificada." });
             }
             
-            return res.json({ response: "Ação não reconhecida" });
+            const result = await model.generateContent(prompt);
+            const text = result.response.text();
+            
+            let parsedResponse = text;
+            if (action === 'generate_survey') {
+                try {
+                    parsedResponse = JSON.parse(text);
+                } catch (e) {
+                    console.error('Erro ao parsear JSON:', text);
+                    return res.status(500).json({ response: "Erro ao gerar perguntas." });
+                }
+            }
+            
+            return res.json({ response: parsedResponse });
             
         } catch (error) {
-            console.error('=== ERRO CAPTURADO ===');
-            console.error('Erro completo:', error);
-            console.error('Message:', error.message);
-            console.error('Stack:', error.stack);
-            return res.status(500).json({ 
-                response: "Erro debug: " + error.message,
-                error: error.toString()
-            });
+            console.error('Erro Gemini:', error);
+            return res.status(500).json({ response: "Erro na comunicação com IA: " + error.message });
         }
     }
     
