@@ -15,7 +15,6 @@ app.post('/api', async (req, res) => {
 
     let prompt = '';
 
-    // Lógica para a primeira etapa: gerar o questionário
     if (action === 'generate_survey') {
         prompt = `
         Aja como um consultor de carreira especializado em ESG e IA.
@@ -42,7 +41,6 @@ app.post('/api', async (req, res) => {
         }
         `;
     } 
-    // Lógica para a segunda etapa: gerar o roadmap
     else if (action === 'generate_roadmap') {
         prompt = `
         Aja como um consultor de carreira especializado em ESG e IA.
@@ -68,7 +66,6 @@ app.post('/api', async (req, res) => {
         const response = await result.response;
         const text = response.text();
 
-        // Tentar parsear o JSON apenas para a primeira etapa
         let parsedResponse = text;
         if (action === 'generate_survey') {
             try {
@@ -87,4 +84,3 @@ app.post('/api', async (req, res) => {
 });
 
 export default app;
-};
