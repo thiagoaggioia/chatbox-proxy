@@ -1,0 +1,8 @@
+{
+  "type": "module",
+  "name": "chatbox-proxy",
+  "version": "1.0.0",
+  "dependencies": {
+    "@google/generative-ai": "^0.15.0"
+  }
+}
