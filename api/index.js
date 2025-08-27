@@ -1,86 +1,38 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import express from 'express';
-import cors from 'cors';
+// Servidor de chat para a Vercel - Versão simplificada
+// Este código usa a sintaxe CommonJS que a Vercel entende por padrão.
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+// Importa os módulos necessários
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Exporta a função que a Vercel vai executar
+module.exports = async (req, res) => {
+    // Configura o CORS para permitir requisições do seu site
+    res.setHeader('Access-Control-Allow-Origin', 'https://thiagoaggio.com');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-app.post('/api', async (req, res) => {
-    const { action, data } = req.body;
-
-    let prompt = '';
-
-    if (action === 'generate_survey') {
-        prompt = `
-        Aja como um consultor de carreira especializado em ESG e IA.
-        Com base no seguinte perfil e objetivo de carreira:
-        - Perfil de trabalho: ${data.perfil}
-        - Habilidades: ${data.habilidades.join(', ')}
-        - Objetivo de carreira: ${data.objetivo}
-        
-        Sua tarefa é criar um questionário com **10 perguntas precisas** e de múltipla escolha para entender melhor as lacunas e interesses desse usuário.
-        As perguntas devem ser focadas em hard skills (ex: "Qual framework de cálculo de carbono você mais utiliza?") e soft skills (ex: "Em um projeto, como você lida com divergências de opinião?").
-        Cada pergunta deve ter 4 opções de resposta.
-        Formate a resposta como um objeto JSON puro, sem textos adicionais, no seguinte formato:
-        {
-          "survey": [
-            {
-              "question": "Texto da primeira pergunta",
-              "options": ["Opção A", "Opção B", "Opção C", "Opção D"]
-            },
-            {
-              "question": "Texto da segunda pergunta",
-              "options": ["Opção A", "Opção B", "Opção C", "Opção D"]
-            }
-          ]
-        }
-        `;
-    } 
-    else if (action === 'generate_roadmap') {
-        prompt = `
-        Aja como um consultor de carreira especializado em ESG e IA.
-        Com base nas seguintes informações de um usuário:
-        - Perfil de trabalho: ${data.perfil}
-        - Habilidades atuais: ${data.habilidades.join(', ')}
-        - Respostas do questionário: ${data.surveyResults}
-        - Objetivo de carreira: ${data.objetivo}
-        
-        Sua tarefa é gerar um roadmap profissional para este usuário, detalhando 3 a 5 passos claros e práticos.
-        Inclua sugestões de aprendizado (ex: "Fazer o curso X"), atividades práticas (ex: "Desenvolver um projeto Y com IA"), e dicas de networking (ex: "Participar do evento Z").
-        O roadmap deve ser direcionado para o objetivo de carreira do usuário e focado em ESG + IA.
-        Sua resposta deve ser um texto formatado em Markdown, sem nenhum JSON.
-        `;
+    // Responde a requisições OPTIONS (necessário para CORS)
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
 
+    // A sua chave de API será lida de forma segura por uma variável de ambiente no Vercel
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
     try {
-        if (!prompt) {
-            return res.status(400).json({ response: "Ação não especificada." });
-        }
+        const { message } = req.body;
         
+        const prompt = `Você é um assistente de apoio para mulheres vítimas de violência doméstica da Procuradoria da Mulher de Joinville. Seu objetivo é ser empático, acolhedor e fornecer informações úteis e seguras, sempre reforçando que a segurança da pessoa é a prioridade. Não dê conselhos médicos ou jurídicos detalhados, mas oriente a buscar ajuda profissional. Sua resposta deve ser sempre em português. Responda a seguinte mensagem: "${message}"`;
+
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
-        let parsedResponse = text;
-        if (action === 'generate_survey') {
-            try {
-                parsedResponse = JSON.parse(text);
-            } catch (e) {
-                console.error('Erro ao parsear JSON:', text);
-                return res.status(500).json({ response: "Desculpe, ocorreu um erro ao gerar as perguntas." });
-            }
-        }
-
-        res.status(200).json({ response: parsedResponse });
+        res.status(200).json({ response: text });
     } catch (error) {
         console.error('Erro na API:', error);
-        res.status(500).json({ response: "Desculpe, ocorreu um erro na comunicação. Por favor, tente novamente." });
+        res.status(500).json({ response: "Desculpe, ocorreu um erro. Por favor, tente novamente." });
     }
-});
-
-export default app;
+};
