@@ -1,20 +1,28 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import express from 'express';
-import cors from 'cors';
-
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-app.post('/api', async (req, res) => {
+export default async function handler(req, res) {
+    // Configurar CORS
+    res.setHeader('Access-Control-Allow-Origin', 'https://thiagoaggio.com');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    // Handle preflight request
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+    
+    // Apenas aceitar POST requests
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
     const { action, data } = req.body;
-
     let prompt = '';
-
+    
     if (action === 'generate_survey') {
         prompt = `
         Aja como um consultor de carreira especializado em ESG e IA.
@@ -56,7 +64,7 @@ app.post('/api', async (req, res) => {
         Sua resposta deve ser um texto formatado em Markdown, sem nenhum JSON.
         `;
     }
-
+    
     try {
         if (!prompt) {
             return res.status(400).json({ response: "Ação não especificada." });
@@ -65,8 +73,9 @@ app.post('/api', async (req, res) => {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
-
+        
         let parsedResponse = text;
+        
         if (action === 'generate_survey') {
             try {
                 parsedResponse = JSON.parse(text);
@@ -75,12 +84,11 @@ app.post('/api', async (req, res) => {
                 return res.status(500).json({ response: "Desculpe, ocorreu um erro ao gerar as perguntas." });
             }
         }
-
+        
         res.status(200).json({ response: parsedResponse });
+        
     } catch (error) {
         console.error('Erro na API:', error);
         res.status(500).json({ response: "Desculpe, ocorreu um erro na comunicação. Por favor, tente novamente." });
     }
-});
-
-export default app;
+}
