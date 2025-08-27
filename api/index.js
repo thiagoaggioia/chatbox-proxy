@@ -1,93 +1,65 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
+// Versão simplificada para debug
 export default async function handler(req, res) {
+    // Log para debug
+    console.log('Method:', req.method);
+    console.log('Origin:', req.headers.origin);
+    
     // Configurar CORS
-    res.setHeader('Access-Control-Allow-Origin', 'https://thiagoaggio.com');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Max-Age', '86400');
     
     // Handle preflight request
     if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+        console.log('Preflight request received');
+        return res.status(200).end();
     }
     
-    // Apenas aceitar POST requests
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+    // Test endpoint
+    if (req.method === 'GET') {
+        return res.status(200).json({ 
+            message: 'API is working',
+            timestamp: new Date().toISOString(),
+            method: req.method
+        });
     }
     
-    const { action, data } = req.body;
-    let prompt = '';
-    
-    if (action === 'generate_survey') {
-        prompt = `
-        Aja como um consultor de carreira especializado em ESG e IA.
-        Com base no seguinte perfil e objetivo de carreira:
-        - Perfil de trabalho: ${data.perfil}
-        - Habilidades: ${data.habilidades.join(', ')}
-        - Objetivo de carreira: ${data.objetivo}
-        
-        Sua tarefa é criar um questionário com **10 perguntas precisas** e de múltipla escolha para entender melhor as lacunas e interesses desse usuário.
-        As perguntas devem ser focadas em hard skills e soft skills.
-        Cada pergunta deve ter 4 opções de resposta.
-        Formate a resposta como um objeto JSON puro, sem textos adicionais, no seguinte formato:
-        {
-          "survey": [
-            {
-              "question": "Texto da primeira pergunta",
-              "options": ["Opção A", "Opção B", "Opção C", "Opção D"]
-            },
-            {
-              "question": "Texto da segunda pergunta",
-              "options": ["Opção A", "Opção B", "Opção C", "Opção D"]
+    // Para POST requests
+    if (req.method === 'POST') {
+        try {
+            const { action, data } = req.body || {};
+            
+            // Por enquanto, retorna uma resposta mock para testar se o CORS funciona
+            if (action === 'generate_survey') {
+                return res.status(200).json({ 
+                    response: {
+                        survey: [
+                            {
+                                question: "Esta é uma pergunta de teste?",
+                                options: ["Sim", "Não", "Talvez", "Não sei"]
+                            }
+                        ]
+                    }
+                });
             }
-          ]
-        }
-        `;
-    } 
-    else if (action === 'generate_roadmap') {
-        prompt = `
-        Aja como um consultor de carreira especializado em ESG e IA.
-        Com base nas seguintes informações de um usuário:
-        - Perfil de trabalho: ${data.perfil}
-        - Habilidades atuais: ${data.habilidades.join(', ')}
-        - Respostas do questionário: ${data.surveyResults}
-        - Objetivo de carreira: ${data.objetivo}
-        
-        Sua tarefa é gerar um roadmap profissional para este usuário, detalhando 3 a 5 passos claros e práticos.
-        Inclua sugestões de aprendizado, atividades práticas, e dicas de networking.
-        O roadmap deve ser direcionado para o objetivo de carreira do usuário e focado em ESG + IA.
-        Sua resposta deve ser um texto formatado em Markdown, sem nenhum JSON.
-        `;
-    }
-    
-    try {
-        if (!prompt) {
+            
+            if (action === 'generate_roadmap') {
+                return res.status(200).json({ 
+                    response: "# Roadmap de Teste\n\n1. Este é um teste\n2. CORS funcionando\n3. API respondendo"
+                });
+            }
+            
             return res.status(400).json({ response: "Ação não especificada." });
+            
+        } catch (error) {
+            console.error('Erro na API:', error);
+            return res.status(500).json({ response: "Erro interno do servidor." });
         }
-        
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-        
-        let parsedResponse = text;
-        
-        if (action === 'generate_survey') {
-            try {
-                parsedResponse = JSON.parse(text);
-            } catch (e) {
-                console.error('Erro ao parsear JSON:', text);
-                return res.status(500).json({ response: "Desculpe, ocorreu um erro ao gerar as perguntas." });
-            }
-        }
-        
-        res.status(200).json({ response: parsedResponse });
-        
-    } catch (error) {
+    }
+    
+    return res.status(405).json({ error: 'Method not allowed' });
+}
         console.error('Erro na API:', error);
         res.status(500).json({ response: "Desculpe, ocorreu um erro na comunicação. Por favor, tente novamente." });
     }
