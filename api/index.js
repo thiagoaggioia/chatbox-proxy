@@ -24,7 +24,7 @@ app.post('/api', async (req, res) => {
         - Objetivo de carreira: ${data.objetivo}
         
         Sua tarefa é criar um questionário com **10 perguntas precisas** e de múltipla escolha para entender melhor as lacunas e interesses desse usuário.
-        As perguntas devem ser focadas em hard skills (ex: "Qual framework de cálculo de carbono você mais utiliza?") e soft skills (ex: "Em um projeto, como você lida com divergências de opinião?").
+        As perguntas devem ser focadas em hard skills e soft skills.
         Cada pergunta deve ter 4 opções de resposta.
         Formate a resposta como um objeto JSON puro, sem textos adicionais, no seguinte formato:
         {
@@ -51,7 +51,7 @@ app.post('/api', async (req, res) => {
         - Objetivo de carreira: ${data.objetivo}
         
         Sua tarefa é gerar um roadmap profissional para este usuário, detalhando 3 a 5 passos claros e práticos.
-        Inclua sugestões de aprendizado (ex: "Fazer o curso X"), atividades práticas (ex: "Desenvolver um projeto Y com IA"), e dicas de networking (ex: "Participar do evento Z").
+        Inclua sugestões de aprendizado, atividades práticas, e dicas de networking.
         O roadmap deve ser direcionado para o objetivo de carreira do usuário e focado em ESG + IA.
         Sua resposta deve ser um texto formatado em Markdown, sem nenhum JSON.
         `;
